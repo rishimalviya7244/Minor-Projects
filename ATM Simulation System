@@ -1,0 +1,97 @@
+from functools import reduce
+
+
+accounts = {
+    101: {"pin": 1234, "balance": 5000.0, "history": [500, -100, 250, -50]}
+}
+account_meta = (101, "Touya Mochizuki") 
+transaction_types = {"WITHDRAW", "DEPOSIT", "BALANCE_INQUIRY"}
+status_codes = frozenset({"SUCCESS", "ERR_PIN", "ERR_FUNDS"})
+
+
+def log_transaction(func):
+    """Decorator to add logging."""
+    def wrapper(*args, **kwargs):
+        print("[Log] Transaction initiated...")
+        return func(*args, **kwargs)
+    return wrapper
+
+def verify_pin(func):
+    """Decorator to validate PIN."""
+    def wrapper(*args, **kwargs):
+        try:
+            entered_pin = int(input("Enter PIN: "))
+            if entered_pin == accounts[101]["pin"]:
+                return func(*args, **kwargs)
+            else:
+                print("[Error] Invalid PIN.")
+        except ValueError:
+            print("[Error] Please enter numerical PIN digits only.")
+    return wrapper
+
+
+@verify_pin
+@log_transaction
+def execute_withdrawal(amount):
+    if accounts[101]["balance"] >= amount:
+        accounts[101]["balance"] -= amount
+        accounts[101]["history"].append(-amount)
+        print(f"[Success] Dispensing ${amount}. Remaining Balance: ${accounts[101]['balance']}")
+    else:
+        print("[Error] Insufficient funds!")
+
+@verify_pin
+@log_transaction
+def process_deposit(amount):
+    accounts[101]["balance"] += amount
+    accounts[101]["history"].append(amount)
+    print(f"[Success] Deposited: ${amount}. New Balance: ${accounts[101]['balance']}")
+
+
+def display_analytics():
+    history = accounts[101]["history"]
+    print("\n--- ACCOUNT ANALYTICS ---")
+    
+    
+    formatted_history = list(map(lambda amt: f"Deposit: ${amt}" if amt > 0 else f"Withdraw: ${abs(amt)}", history))
+    print("Formatted History:", formatted_history)
+
+    
+    major_withdrawals = list(filter(lambda amt: amt < -50, history))
+    print("Major Withdrawals (> $50):", major_withdrawals)
+
+   
+    net_change = reduce(lambda acc, current: acc + current, history)
+    print(f"Net Change: ${net_change}")
+
+def atm_menu():
+    print(f"\n=== ATM SIMULATOR ({account_meta[1]}) ===")
+    print("1. Withdraw")
+    print("2. Deposit")
+    print("3. View History Analytics")
+    print("4. Exit")
+    
+    choice = input("Select an option (1-4): ")
+    
+    if choice == '1':
+        amt = float(input("Enter withdrawal amount: "))
+    
+        selected_operation = execute_withdrawal
+        selected_operation(amt)
+    elif choice == '2':
+        amt = float(input("Enter deposit amount: "))
+        selected_operation = process_deposit
+        selected_operation(amt)
+    elif choice == '3':
+        display_analytics()
+    elif choice == '4':
+        print("\nThank you for banking with us. Goodbye!")
+        return  
+    else:
+        print("[Error] Invalid choice, please try again.")
+        
+
+    atm_menu()
+
+
+atm_menu()
